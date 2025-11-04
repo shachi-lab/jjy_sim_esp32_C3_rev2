@@ -1,7 +1,7 @@
 # 📡 JJY Simulator for ESP32-C3 Rev.2
 
-電波時計の補正信号をESP32-C3で自作！
-NTPから取得した正確な時刻をもとに、40kHz / 60kHz のJJY信号をPWM出力で模倣する、ミニJJYシミュレーターです。
+電波時計の補正信号をESP32-C3で自作！  
+NTPから取得した正確な時刻をもとに、40kHz / 60kHz のJJY信号をPWM出力で模倣する、ミニJJYシミュレーターです。  
 Rev.2 はRF出力をHブリッジ構成としました。
 
 ## 🛠 特徴
@@ -19,7 +19,7 @@ Rev.2 はRF出力をHブリッジ構成としました。
 
 ## ⚙️ 使用方法
 
-### 1. コンパイル・書き込み
+### 1. ビルド・書き込み
 
 1. Arduino IDE で ESP32ボードを有効にする  
    - ボードマネージャURL：`https://dl.espressif.com/dl/package_esp32_index.json`
@@ -75,8 +75,9 @@ Rev.2 はRF出力をHブリッジ構成としました。
 
 ## 🧾 ファイル構成
 
+Arduino用のソースコードは、**`Source`** フォルダにあります。
 ```
-JJY_Sim_ESP32_C3_REV2.ino       // メインスケッチ
+JJY_Sim_ESP32_C3_REV2.ino  // メインスケッチ
 wire_compat.h              // ESP32-C3 用の I2C バス互換ヘッダ
 ```
 
@@ -84,6 +85,12 @@ wire_compat.h              // ESP32-C3 用の I2C バス互換ヘッダ
 
 - [WiFiManager](https://github.com/tzapu/WiFiManager)
 - [ESP8266 and ESP32 OLED driver](https://github.com/ThingPulse/esp8266-oled-ssd1306)
+
+## 🧰 ハードウェアデータ
+
+ハードウェア設計データは、**`KiCad`** フォルダ にアップロードしてあります。  
+- **KiCad Ver.9** に対応しています（Ver.8以前では開けません）  
+- **ガーバーデータ** は **`KiCad/PLOT`** フォルダに含まれており、そのまま基板製作が可能です。
 
 ## ⚠️ ご注意
 
