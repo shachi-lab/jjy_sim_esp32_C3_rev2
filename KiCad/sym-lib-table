@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "esp32_JJY_sim_S3_rev2-rescue")(type "KiCad")(uri "${KIPRJMOD}/esp32_JJY_sim_C3_rev2-rescue.kicad_sym")(options "")(descr ""))
+)
