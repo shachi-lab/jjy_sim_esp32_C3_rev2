@@ -1,103 +1,130 @@
-# 📡 JJY Simulator for ESP32-C3 Rev.2
+# JJY-SIM (JJY Time Signal Simulator for ESP32-C3 Rev.2)
 
-電波時計の補正信号をESP32-C3で自作！  
-NTPから取得した正確な時刻をもとに、40kHz / 60kHz のJJY信号をPWM出力で模倣する、ミニJJYシミュレーターです。  
-Rev.2 はRF出力をHブリッジ構成としました。
+[🇯🇵 日本語版はこちら](README_ja.md)
 
-## 🛠 特徴
-
-- ESP32-C3 + Arduino によるコンパクトな構成
-- Wi-Fi設定はボタンひとつで簡単APモード
-- OLEDに現在時刻を表示
-- PWM出力は A=GPIO10, B=GPIO4 から
-- JJY 40kHz（東日本）/ 60kHz（西日本）を切り替え可能
-- 出力信号は基板内蔵の簡易アンテナから放射
-- Hブリッジ構成で高出力です（飛びすぎ注意）
+**JJY-SIM** is a compact time signal simulator that emulates Japan's JJY standard radio time code (40 kHz / 60 kHz) using an ESP32-C3 and the Arduino framework.  
+It fetches accurate NTP time and generates a modulated JJY signal via PWM. 
+**Rev.2** introduces an H-bridge RF output for higher transmission power and improved stability.
 
 <a href="./images/jjy_sim_rev2_board_w800.jpg">
-<img src="./images/jjy_sim_rev2_board_w800.jpg" alt="JJYシミュレーター" width=200 style="max-width:100%; height:auto;"></a><br/>
+<img src="./images/jjy_sim_rev2_board_w800.jpg" alt="JJY Simulator Board" width=200 style="max-width:100%; height:auto;"></a><br/>
 
-## ⚙️ 使用方法
+---
 
-### 1. ビルド・書き込み
+## 🛠 Features
 
-1. Arduino IDE で ESP32ボードを有効にする  
-   - ボードマネージャURL：`https://dl.espressif.com/dl/package_esp32_index.json`
-   - 対象ボード：**ESP32-C3 Dev Module**
+- Compact design based on **ESP32-C3 + Arduino**
+- Easy Wi-Fi setup with one-button AP configuration
+- OLED display showing the current time
+- PWM output pins: **A = GPIO10**, **B = GPIO4**
+- Selectable JJY frequency: **40 kHz (East Japan)** / **60 kHz (West Japan)**
+- Built-in small antenna emits real RF signal
+- H-bridge configuration for high output power (⚠ use responsibly)
 
-2. 必要なライブラリをインストールする  
-   - [WiFiManager](https://github.com/tzapu/WiFiManager)（バージョン 2.0.17 推奨）
-   - [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306)（バージョン 4.6.0 推奨）
+---
 
-   ※ Arduino IDE の「ライブラリを管理」メニューからインストール可能です。
+## ⚙️ How to Build
 
-3. `JJY_Sim_ESP32_C3_REV2.ino` を開き、必要に応じて以下を編集：
-   - `#define JJY_TYPE 0` → `0: 40kHz`, `1: 60kHz`
+1. **Set up ESP32 boards in Arduino IDE**
+   - Boards Manager URL:  
+     `https://dl.espressif.com/dl/package_esp32_index.json`
+   - Target board: **ESP32-C3 Dev Module**
 
-4. 書き込みポートとボード設定を確認して、コンパイル＆アップロード
+2. **Install required libraries**
+   - [WiFiManager](https://github.com/tzapu/WiFiManager) (v2.0.17 recommended)
+   - [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306) (v4.6.0 recommended)
 
-> 💡 補足：
-> ESP32-C3は、外付けのUSBシリアルICを使わず、チップ内蔵の**ネイティブUSB-UART**機能で書き込み・シリアル通信を行います。
-> 一部の環境（特にWindows）では、デバイス認識のために**Espressif提供のUSBドライバ**が必要になる場合があります。
+3. **Open the sketch**
+   - File: `JJY_Sim_ESP32_C3_REV2.ino`
+   - Edit frequency selection if needed:
+     ```cpp
+     #define JJY_TYPE 0   // 0: 40kHz, 1: 60kHz
+     ```
 
-- ドライバDLページ 👉 https://www.espressif.com/en/support/download/other-tools
+4. **Compile and upload**
+   - Select the correct board and COM port.
+   - Click “Upload”.
 
->⚠️ 初回起動について
-> プログラムを書き込んだ直後の「初回起動」では、内部FLASHにファイルシステムを構築する処理が行われます。  
-> このため、数十秒ほど反応がなく「ハングしたように見える」場合があります。  
-> 完了すると自動的に再起動し、以降は通常通りすぐに動作しますが、再起動しない場合は、RESETボタンでリセットしてください。
+> 💡 **Note:**  
+> ESP32-C3 uses its built-in **native USB-UART** for flashing and serial communication.  
+> On Windows, you may need the official **Espressif USB driver**:  
+> [Download here](https://www.espressif.com/en/support/download/other-tools)
 
-### 2. Wi-Fi設定
+> ⚠ **First Boot:**  
+> On first startup, the device creates a SPIFFS file system in internal flash.  
+> It may appear frozen for 30 seconds.  
+> Once finished, it will reboot automatically.
 
-- 電源投入 or リセット後、5秒以内に CONFIGスイッチを押す
-- `ESP32_XXXXXXXX` というAPが起動（パスキー：`password`）
-- スマホやPCから接続 → キャプティブポータルでSSID/パスキーを設定
+---
 
-### 3. 動作確認
+## 📶 Wi-Fi Setup
 
-- 電源投入 or リセット後、5秒間放置すると、WiFiのAPに接続しに行きます。
-- APに接続すると、NTPサーバーから時刻を取得します。
-- OLEDに現在時刻が表示され、0秒からPWMでJJY信号出力開始
-- 電波時計の「受信ボタン」を押して、近くに置いておくだけ！
+- After power-on or reset, press the **CONFIG** switch within 5 seconds.  
+- An AP named `ESP32_XXXXXXXX` starts (password: `password`).  
+- Connect from your phone or PC → set your Wi-Fi SSID and password via captive portal.
 
-## 🔌 ピンアサイン（主なもの）
+---
 
-| 機能 | GPIO | 備考 |
-|------|------|------|
-| JJY PWM出力 | 10,4 | 変調された信号で、Hブリッジ用にA/Bの反転出力 |
-| CONFIGスイッチ | 9 | Wi-Fi設定用（**BOOTピンと兼用**） |
-| ACT LED | 5 | 動作中LED |
-| IND LED | 0 | 状態表示用LED（共用可） |
-| OLED Reset | 2 | OLEDモジュールリセット |
-| OLED SDA|7| OLED I2C データー|
-| OLED SCL |6|OLED I2C クロック|
+## 🕒 Operation
 
+- If no button is pressed, the device connects to your Wi-Fi automatically.  
+- Retrieves time from NTP server.  
+- Displays current time on OLED.  
+- Starts PWM JJY signal output synchronized to the next 0 second.  
+- Place your radio-controlled clock near the antenna and press its “Receive” button.
 
-## 🧾 ファイル構成
+---
 
-Arduino用のソースコードは、**`Source`** フォルダにあります。
+## 🔌 Pin Assignments
+
+| Function | GPIO | Description |
+|-----------|------|-------------|
+| JJY PWM Output | 10, 4 | Modulated signal (A/B for H-bridge) |
+| CONFIG Switch | 9 | Wi-Fi setup (shared with BOOT) |
+| ACT LED | 5 | Activity indicator |
+| IND LED | 0 | Status indicator |
+| OLED Reset | 2 | OLED hardware reset |
+| OLED SDA | 7 | I²C data |
+| OLED SCL | 6 | I²C clock |
+
+---
+
+## 🧾 File Structure
+
+All Arduino source files are in the **`Source/`** folder:
+
 ```
-JJY_Sim_ESP32_C3_REV2.ino  // メインスケッチ
-wire_compat.h              // ESP32-C3 用の I2C バス互換ヘッダ
+JJY_Sim_ESP32_C3_REV2.ino   // Main sketch
+wire_compat.h               // I²C compatibility header for ESP32-C3
+shachi-lab_logo.h           // Logo bitmap
 ```
 
-## 📎 依存ライブラリ
+---
 
-- [WiFiManager](https://github.com/tzapu/WiFiManager)
-- [ESP8266 and ESP32 OLED driver](https://github.com/ThingPulse/esp8266-oled-ssd1306)
+## 📚 Dependencies
 
-## 🧰 ハードウェアデータ
+- [WiFiManager](https://github.com/tzapu/WiFiManager)  
+- [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306)
 
-ハードウェア設計データは、**`KiCad`** フォルダ にアップロードしてあります。  
-- **KiCad Ver.9** に対応しています（Ver.8以前では開けません）  
-- **ガーバーデータ** は **`KiCad/PLOT`** フォルダに含まれており、そのまま基板製作が可能です。
+---
 
-## ⚠️ ご注意
+## 🧰 Hardware Data
 
-思った以上に電波が飛びます。  
-電波法を守って実験してください。
+KiCad design files are included in the **`KiCad/`** folder.  
+- Compatible with **KiCad v9** (older versions not supported)  
+- **Gerber files** for fabrication are located in `KiCad/PLOT/`.
 
-## 🔗 関連リンク
+---
 
-- ブログ記事（詳細解説＋ケースや基板配布）  
-  👉 https://blog.shachi-lab.com/033_jjy_simulator/
+## ⚠ Legal Notice
+
+This device emits real low-frequency RF signals.  
+Please use it responsibly and ensure compliance with local radio regulations.
+
+---
+
+## 🔗 Related Links
+
+- Blog article (Japanese, detailed build notes):  
+  👉 https://blog.shachi-lab.com/047_jjy_sim_rev2/
+
