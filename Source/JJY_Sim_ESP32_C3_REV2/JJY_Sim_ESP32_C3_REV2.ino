@@ -1,11 +1,10 @@
 /*
- * JJY Simulator Rev.2
+ * JJY Simulater Rev.2
  * ESP32-C3-WROOM-02
  * 
  * ファイル/環境設定の追加のボードマネージャに
  * "https://dl.espressif.com/dl/package_esp32_index.json" を追加
  * 
- * [env:wemos_d1_mini32]
  * platform = espressif32
  * board = ESP32C3 Dev Module
  *
@@ -14,19 +13,19 @@
  */
 #include <WiFi.h>
 #include <time.h>
-#include <Wire.h>  // Only needed for Arduino 1.6.5 and earlier
+#include <Wire.h>           // Only needed for Arduino 1.6.5 and earlier
 #include "wire_compat.h"
-#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
-#include "OLEDDisplayUi.h"
-#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
-#include "FS.h"
-#include "SPIFFS.h"
+#include <OLEDDisplayUi.h>  // https://github.com/ThingPulse/esp8266-oled-ssd1306
+#include <SSD1306Wire.h>    //
+#include <WiFiManager.h>    // https://github.com/tzapu/WiFiManager
+#include <FS.h>
+#include <SPIFFS.h>
 #include <driver/ledc.h>
+#include "shachi-lab_logo.h"
 
 #define Wire1 Wire
 
 #define JJY_TYPE          0       // 0:East(40kHz) / 1:West(60kHz)
-#define WIFI_DEFAULT      1
 
 #define FORMAT_SPIFFS_IF_FAILED true
 #define FILE_NAME         "/JJY_TYPE.DAT"
@@ -53,8 +52,8 @@
 
 #define JJY_FREQ_EAST     40000
 #define JJY_FREQ_WEST     60000
-#define JJY_STR_EAST      "(E)"
-#define JJY_STR_WEST      "(W)"
+#define JJY_STR_EAST      "E"
+#define JJY_STR_WEST      "W"
 #define JJY_TYPE_STR(type)  (!type ? JJY_STR_EAST : JJY_STR_WEST)
 #define JJY_TYPE_FREQ(type) (!type ? JJY_FREQ_EAST : JJY_FREQ_WEST)
 
@@ -77,13 +76,10 @@
 #define JJY_BIT_PM0       -2
 #define JJY_BIT_OFF       -3
 
-// Wi-Fi設定保存ファイル
-const char* WiFi_settings = "/wifi_settings.txt";
-const char* Potal_pass = "password";
-const char* Version_str = "Version 2.00.0";
+const char* Version_str = "Version 2.0.0";
 
-String WiFi_ssid = "my-ssid";
-String WiFi_pass = "my-pass";
+String WiFi_ssid = "ssid";
+String WiFi_pass = "pass";
 String WiFi_time = "";
 String WiFi_ip   = "";
 char timeNowStr[64] = "";
@@ -107,7 +103,8 @@ void setup() {
 
   led_blink(PIN_LED_WIFI, LED_ON);
   led_blink(PIN_LED_WAVE, LED_ON);
-  delay(500);
+  disp_screen(0);
+  delay(2000);
 
   Serial.begin(115200);
   Serial.println();
@@ -124,7 +121,7 @@ void setup() {
   }
   Serial.println("JJY_FREQ = " + String(JJY_freq) + JJY_str ); 
 
-  disp_screen(0);
+  disp_screen(1);
 
   pinMode(PIN_CONFIG, INPUT_PULLUP);  
   led_blink(PIN_LED_WIFI, LED_OFF);
@@ -154,13 +151,14 @@ void setup() {
     break;
   }
 
-  disp_screen(1);
+  WiFi_ssid = wm.getWiFiSSID();
+  WiFi_pass = wm.getWiFiPass();
+  Serial.println(WiFi_ssid);
+//Serial.println(WiFi_pass);
+
+  disp_screen(2);
   led_blink(PIN_LED_WAVE, LED_OFF);
 
-  WiFi_ssid = wm.getWiFiSSID(!conn_flag);
-  WiFi_pass = wm.getWiFiPass(!conn_flag);
-  Serial.println(WiFi_ssid);
-  Serial.println(WiFi_pass);
   if( !conn_flag ) {
     Serial.println("Connecting....");
     led_blink(PIN_LED_WIFI, LED_BLINK);
@@ -174,16 +172,13 @@ void setup() {
 
     conn_flag = true;
     Serial.println("connected...");
-
-//  WiFi_ssid = WiFi.SSID();
-//  WiFi_pass = WiFi.psk();
     Serial.print  ("IP Address:");
     Serial.println(WiFi.localIP());
   
     led_blink(PIN_LED_WIFI, LED_ON);
 //  digitalWrite(5,0);
 
-    disp_screen(3);  
+    disp_screen(4);  
 
   }else
   { 
@@ -197,19 +192,49 @@ void setup() {
 }
 
 /*
- * 
+ * メインループ
  */
 void loop() {
-  get_ntp_time();
+
+  static int radio_output_stat = 0;
+  static int last_min = 99;
+
+  struct tm *tm;
+  tm = get_time_now();
+  if ( tm == NULL ) return; 
+
+  if ( timeNowStr[0] == '\0' ) {
+      Serial.printf(".");
+      disp_screen(5);
+      return;
+  }
+
+  disp_screen(6 + radio_output_stat);
+
+  if( tm->tm_sec != 0 ) return;
+  if( tm->tm_min == last_min ) return;
+  last_min = tm->tm_min;
+
+  Serial.println();
+  Serial.printf("JST=%s > ", timeNowStr);
+
+  radio_output_stat = 1;
+
+  jjy_output( tm );
+
+  led_blink(PIN_LED_WAVE, LED_ON);
 }
 
+/*
+* 再起動処理
+*/
 void go_reboot(String text)
 {
   led_blink(PIN_LED_WIFI, LED_ON);
   led_blink(PIN_LED_WAVE, LED_ON);
   Serial.println(text);
   Serial.println("reboot!!");
-  disp_screen(2);
+  disp_screen(3);
 
   led_blink(PIN_LED_WIFI, LED_OFF);
   led_blink(PIN_LED_WAVE, LED_OFF);
@@ -219,6 +244,9 @@ void go_reboot(String text)
   delay(5000);
 }
 
+/*
+* LEDを点滅
+*/
 void led_blink(uint8_t pin, uint8_t mode)
 {
   static bool attached[16] = { 0 };
@@ -235,7 +263,9 @@ void led_blink(uint8_t pin, uint8_t mode)
   }
 }
 
-//
+/*
+* OLEDの画面描画
+*/
 void disp_screen( int mode )
 {
   if(mode == 0) {
@@ -248,11 +278,16 @@ void disp_screen( int mode )
     // Initialising the UI will init the display too.
     display.init();
     display.flipScreenVertically();
+
+    display.drawXbm(0, 0, shachilab_logo_width, shachilab_logo_height, shachilab_logo_bits);
+    display.display();
+    return;
   }
 
   display.clear();
   display.setFont(ArialMT_Plain_10);
-  String title = "ESP32 JJY Simulator  " + JJY_str;
+  String title = "ESP32 JJY Simulator R2 " + JJY_str;
+
   display.drawString( 0,  0, title );
 
   if( mode == -1 ){
@@ -264,35 +299,38 @@ void disp_screen( int mode )
     display.drawString( 0, 15, "Enter to CONFIG mode" );
   }
 
-  if( mode > 0 ) {
+  if( mode > 1 ) {
     display.drawString( 0, 15, "SSID : " + WiFi_ssid );
   }
-  if( mode == 1 ) {
+  if( mode == 2 ) {
     display.drawString( 0, 25, "Connecting..." );
   } else
-  if( mode == 2 ) {
+  if( mode == 3 ) {
       display.drawString( 0, 25, "Connect timeout");
       display.drawString( 0, 35, "Reboot now!!" );
   } else
-  if( mode > 2 ) {
+  if( mode > 3 ) {
       display.drawString( 0, 25, "Connect : " + WiFi.localIP().toString());
   }
-  if( mode == 5 ){
+  if( mode == 6 ){
     display.drawString( 0, 35, "Waiting for just min" );
   } else
-  if( mode > 5 ) {
+  if( mode > 6 ) {
     display.drawString( 0, 35, "Outputting the wave!!" );
   }
-  if( mode == 4 ) {
+  if( mode == 5 ) {
     display.drawString( 0, 35, "Waiting to get time");
   } else
-  if( mode > 4 ) {
+  if( mode > 5 ) {
     display.setFont(ArialMT_Plain_16);
     display.drawString( 0, 45, timeNowStr);
   }
   display.display();
 }
 
+/*
+* 現在時刻を取得
+*/
 struct tm *get_time_now()
 {
   static time_t time_last = 0;
@@ -317,40 +355,8 @@ struct tm *get_time_now()
 }
 
 /*
- * 
- */
- void get_ntp_time()
-{
-  static int radio_output_stat = 0;
-  static int last_min = 99;
-
-  struct tm *tm;
-  tm = get_time_now();
-  if ( tm == NULL ) return; 
-
-  if ( timeNowStr[0] == '\0' ) {
-      Serial.printf(".");
-      disp_screen(4);
-      return;
-  }
-
-  disp_screen(5 + radio_output_stat);
-
-  if( tm->tm_sec != 0 ) return;
-  if( tm->tm_min == last_min ) return;
-  last_min = tm->tm_min;
-
-  Serial.println();
-  Serial.printf("JST=%s > ", timeNowStr);
-
-  radio_output_stat = 1;
-
-  jjy_output( tm );
-
-  led_blink(PIN_LED_WAVE, LED_ON);
-}
-
-
+* PWM(Hブリッジ)の初期設定
+*/
 void pwm_setup()
 {
   pinMode(PIN_PWM_A, OUTPUT);                 
@@ -387,7 +393,7 @@ void pwm_stop()
 }
 
 /*
- * 
+ * JJYの1ビットを出力 
  */
 void jjy_put_bit( int flag )
 {
@@ -432,11 +438,11 @@ void jjy_put_bit( int flag )
     return;
   }
   while ( get_time_now() == NULL ) delay(1);
-  disp_screen(6);
+  disp_screen(7);
 }
 
 /*
- * 
+ * intをBCDに変換
  */
 int get_int_to_bcd( int n )
 {
@@ -447,7 +453,7 @@ int get_int_to_bcd( int n )
 }
 
 /*
- * 
+ * 偶数パリティを計算
  */
 int get_even_parity( int n )
 {
@@ -459,7 +465,7 @@ int get_even_parity( int n )
 }
 
 /*
- * 
+ * JJYフォーマットを出力
  */
 void jjy_output( struct tm *tm )
 {
@@ -553,6 +559,9 @@ const int totalDaysOfMonth[] = {0,31,59,90,120,151,181,212,243,273,304,334 };
   jjy_put_bit( JJY_BIT_PM0 );   // :59 P0
 }
 
+/*
+* JJYのタイプ(E/W)を取得
+*/
 uint8_t get_JJY_type()
 {
   uint8_t type = 0;
@@ -568,6 +577,9 @@ uint8_t get_JJY_type()
   return type;
 }
 
+/*
+* JJYのタイプ(E/W)を保存
+*/
 void put_JJY_type(String type)
 {
   File fp = SPIFFS.open(FILE_NAME, FILE_WRITE);
@@ -579,6 +591,9 @@ void put_JJY_type(String type)
   fp.close();
 }
 
+/*
+* JJYタイプの設定画面 (for WM)
+*/
 void config_mode_setup()
 {
   static String custom_radio_str = "<br/><label for='radiofreq'>Radio Freq</label><br><input type='radio' name='radiofreq' value='0' ";
@@ -598,6 +613,9 @@ void config_mode_setup()
   wm.setConfigPortalTimeout(120);
 }
 
+/*
+* POSTパラメーターを取得する
+*/
 String getParam(String name)
 {
   //read parameter from server, for customhmtl input
@@ -608,6 +626,9 @@ String getParam(String name)
   return value;
 }
 
+/*
+* SVAEコールバック
+*/
 void saveParamCallback(){
   Serial.println("[CALLBACK] saveParamCallback fired");
   String para = getParam("radiofreq");
