@@ -111,11 +111,13 @@ void setup() {
   led_blink(PIN_LED_WIFI, LED_ON);
   led_blink(PIN_LED_WAVE, LED_ON);
   disp_screen(0);
-  delay(2000);
+  delay(500);
 
   Serial.begin(115200);
   Serial.println();
-  Serial.println("Start JJY Sim / ESP32-C3");
+  Serial.println(PRODUCT_NAME_STR);
+  Serial.println(VERSION_STR);
+  delay(1500);
 
   if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
     go_reboot("SPIFFS Mount Failed");
@@ -160,11 +162,13 @@ void setup() {
 
   WiFi_ssid = wm.getWiFiSSID();
   WiFi_pass = wm.getWiFiPass();
-  Serial.println(WiFi_ssid);
-//Serial.println(WiFi_pass);
+  Serial.println("ssid : " + WiFi_ssid);
+//Serial.println("pass : " + WiFi_pass);
 
   disp_screen(2);
   led_blink(PIN_LED_WAVE, LED_OFF);
+
+  wm.setDebugOutput(false);
 
   if( !conn_flag ) {
     Serial.println("Connecting....");
@@ -222,7 +226,7 @@ void loop() {
   last_min = tm->tm_min;
 
   Serial.println();
-  Serial.printf("JST=%s > ", timeNowStr);
+  Serial.printf("%s > ", timeNowStr);
 
   radio_output_stat = 1;
 
