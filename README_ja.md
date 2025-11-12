@@ -4,7 +4,7 @@
 NTPから取得した正確な時刻をもとに、40kHz / 60kHz のJJY信号をPWM出力で模倣する、ミニJJYシミュレーターです。  
 Rev.2 はRF出力をHブリッジ構成としました。
 
-## 🛠 特徴
+## 🪛 特徴
 
 - **ESP32-C3 + Arduino** によるコンパクトな構成
 - Wi-Fi設定はボタンひとつで **簡単APモード**
@@ -32,8 +32,7 @@ Rev.2 はRF出力をHブリッジ構成としました。
 
    ※ Arduino IDE の「ライブラリを管理」メニューからインストール可能です。
 
-3. `JJY_Sim_ESP32_C3_REV2.ino` を開き、必要に応じて以下を編集：
-   - `#define JJY_TYPE 0` → `0: 40kHz`, `1: 60kHz`
+3. `JJY_Sim_ESP32_C3_REV2.ino` を開きます。
 
 4. 書き込みポートとボード設定を確認して、コンパイル＆アップロード
 
@@ -52,7 +51,8 @@ Rev.2 はRF出力をHブリッジ構成としました。
 
 - 電源投入 or リセット後、5秒以内に CONFIGスイッチを押す
 - `ESP32_XXXXXXXX` というAPが起動
-- スマホやPCから接続 → キャプティブポータルでSSID/パスキーを設定
+- スマホやPCから接続 → キャプティブポータルが表示されます。
+- [WiFi Configure] からで、SSID/パスキーを設定
 - [Setup] から、BAND、ローカル時間、DSTを設定可能 
 
 ### 3. 動作確認
@@ -82,6 +82,7 @@ Arduino用のソースコードは、**`Source`** フォルダにあります。
 JJY_Sim_ESP32_C3_REV2.ino   // メインスケッチ
 wire_compat.h               // ESP32-C3 用の I2C バス互換ヘッダ
 shachi-lab_logo.h           // Logo bitmap
+src/WiFiManager/            // ここにはいくつかのファイルがあります
 ```
 
 ## 📎 依存ライブラリ

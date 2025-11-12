@@ -1,4 +1,4 @@
-# JJY-SIM (JJY Time Signal Simulator for ESP32-C3 Rev.2)
+# JJY-SIM Rev.2 (JJY Time Signal Simulator for ESP32-C3)
 
 [🇯🇵 日本語版はこちら](README_ja.md)
 
@@ -11,7 +11,7 @@ It fetches accurate NTP time and generates a modulated JJY signal via PWM.
 
 ---
 
-## 🛠 Features
+## 🪛 Features
 
 - Compact design using **ESP32-C3 + Arduino**  
 - Easy Wi-Fi setup with single-button **AP mode**  
@@ -37,24 +37,19 @@ It fetches accurate NTP time and generates a modulated JJY signal via PWM.
 
 3. **Open the sketch**
    - File: `JJY_Sim_ESP32_C3_REV2.ino`
-   - Edit frequency selection if needed:
-     ```cpp
-     #define JJY_TYPE 0   // 0: 40kHz, 1: 60kHz
-     ```
 
 4. **Compile and upload**
    - Select the correct board and COM port.
    - Click “Upload”.
 
 > 💡 **Note:**  
-> ESP32-C3 uses its built-in **native USB-UART** for flashing and serial communication.  
-> On Windows, you may need the official **Espressif USB driver**:  
-> [Download here](https://www.espressif.com/en/support/download/other-tools)
+ESP32-C3 uses its built-in **native USB-UART** for flashing and serial communication.  
+On Windows, you may need the official **Espressif USB driver**:  
+[Download here](https://www.espressif.com/en/support/download/other-tools)
 
-> ⚠ **First Boot:**  
-> On first startup, the device creates a SPIFFS file system in internal flash.  
-> It may appear frozen for 30 seconds.  
-> Once finished, it will reboot automatically.
+> ⚠️ **First Boot:**  
+During the first startup immediately after writing the program, the system builds a file system in the internal flash memory. Because of this, there may be no response for several tens of seconds, making it appear as if the system has “hung.”
+Once the process is complete, the system will automatically reboot, and from then on it will start up normally. If it does not reboot automatically, please press the RESET button to restart.
 
 ---
 
@@ -62,7 +57,8 @@ It fetches accurate NTP time and generates a modulated JJY signal via PWM.
 
 - After power-on or reset, press the **CONFIG** switch within 5 seconds.  
 - An AP named `ESP32_XXXXXXXX` starts (password: `password`).  
-- Connect from your phone or PC → set your Wi-Fi SSID and password via captive portal.
+- Connect from your phone or PC → captive portal.
+- [WiFi Configure] page → set your Wi-Fi SSID and password. 
 - [Setup] page allows configuration of BAND, local time, and DST settings.
 
 ---
@@ -99,6 +95,7 @@ All Arduino source files are in the **`Source/`** folder:
 JJY_Sim_ESP32_C3_REV2.ino   // Main sketch
 wire_compat.h               // I²C compatibility header for ESP32-C3
 shachi-lab_logo.h           // Logo bitmap
+src/WiFiManager/            // Several files in this folder
 ```
 
 ---
@@ -117,7 +114,7 @@ KiCad design files are included in the **`KiCad/`** folder.
 
 ---
 
-## ⚠ Legal Notice
+## ⚠️ Legal Notice
 
 This device emits real low-frequency RF signals.  
 Please use it responsibly and ensure compliance with local radio regulations.
