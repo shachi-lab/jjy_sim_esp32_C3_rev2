@@ -6,13 +6,15 @@ Rev.2 はRF出力をHブリッジ構成としました。
 
 ## 🛠 特徴
 
-- ESP32-C3 + Arduino によるコンパクトな構成
-- Wi-Fi設定はボタンひとつで簡単APモード
-- OLEDに現在時刻を表示
-- PWM出力は A=GPIO10, B=GPIO4 から
-- JJY 40kHz（東日本）/ 60kHz（西日本）を切り替え可能
-- 出力信号は基板内蔵の簡易アンテナから放射
-- Hブリッジ構成で高出力です（飛びすぎ注意）
+- **ESP32-C3 + Arduino** によるコンパクトな構成
+- Wi-Fi設定はボタンひとつで **簡単APモード**
+- **OLED 表示** による時刻・同期状態の確認 
+- **NTP** で自動時刻同期
+- **JJY 40kHz（東日本）/ 60kHz（西日本）** を切り替え可能
+- 出力信号は基板内蔵の**簡易アンテナ** から放射
+- **Hブリッジ構成** で高出力です（飛びすぎ注意）
+- **Web ブラウザ** での設定ページ
+- **タイムゾーン と、DST（夏時間）** に対応
 
 <a href="./images/jjy_sim_rev2_board_w800.jpg">
 <img src="./images/jjy_sim_rev2_board_w800.jpg" alt="JJYシミュレーター" width=200 style="max-width:100%; height:auto;"></a><br/>
@@ -26,7 +28,6 @@ Rev.2 はRF出力をHブリッジ構成としました。
    - 対象ボード：**ESP32-C3 Dev Module**
 
 2. 必要なライブラリをインストールする  
-   - [WiFiManager](https://github.com/tzapu/WiFiManager)（バージョン 2.0.17 推奨）
    - [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306)（バージョン 4.6.0 推奨）
 
    ※ Arduino IDE の「ライブラリを管理」メニューからインストール可能です。
@@ -50,12 +51,13 @@ Rev.2 はRF出力をHブリッジ構成としました。
 ### 2. Wi-Fi設定
 
 - 電源投入 or リセット後、5秒以内に CONFIGスイッチを押す
-- `ESP32_XXXXXXXX` というAPが起動（パスキー：`password`）
+- `ESP32_XXXXXXXX` というAPが起動
 - スマホやPCから接続 → キャプティブポータルでSSID/パスキーを設定
+- [Setup] から、BAND、ローカル時間、DSTを設定可能 
 
 ### 3. 動作確認
 
-- 電源投入 or リセット後、5秒間放置すると、WiFiのAPに接続しに行きます。
+- 電源投入 or リセット でロゴ表示後、5秒間放置すると、WiFiのAPに接続しに行きます。
 - APに接続すると、NTPサーバーから時刻を取得します。
 - OLEDに現在時刻が表示され、0秒からPWMでJJY信号出力開始
 - 電波時計の「受信ボタン」を押して、近くに置いておくだけ！
@@ -84,7 +86,6 @@ shachi-lab_logo.h           // Logo bitmap
 
 ## 📎 依存ライブラリ
 
-- [WiFiManager](https://github.com/tzapu/WiFiManager)
 - [ESP8266 and ESP32 OLED driver](https://github.com/ThingPulse/esp8266-oled-ssd1306)
 
 ## 🧰 ハードウェアデータ

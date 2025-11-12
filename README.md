@@ -13,13 +13,15 @@ It fetches accurate NTP time and generates a modulated JJY signal via PWM.
 
 ## 🛠 Features
 
-- Compact design based on **ESP32-C3 + Arduino**
-- Easy Wi-Fi setup with one-button AP configuration
-- OLED display showing the current time
-- PWM output pins: **A = GPIO10**, **B = GPIO4**
-- Selectable JJY frequency: **40 kHz (East Japan)** / **60 kHz (West Japan)**
-- Built-in small antenna emits real RF signal
-- H-bridge configuration for high output power (⚠ use responsibly)
+- Compact design using **ESP32-C3 + Arduino**  
+- Easy Wi-Fi setup with single-button **AP mode**  
+- **OLED display** shows current time and sync status  
+- Automatic time synchronization via **NTP**  
+- Switchable **JJY 40 kHz (East Japan) / 60 kHz (West Japan)** output  
+- Signal transmitted from a built-in **mini antenna** on the board  
+- **H-bridge driver** provides high output power (⚠ may transmit farther than expected)  
+- Configurable through a **web browser setup page**  
+- Supports **local time zones (UTC offset)** and **DST (Daylight Saving Time)**
 
 ---
 
@@ -31,7 +33,6 @@ It fetches accurate NTP time and generates a modulated JJY signal via PWM.
    - Target board: **ESP32-C3 Dev Module**
 
 2. **Install required libraries**
-   - [WiFiManager](https://github.com/tzapu/WiFiManager) (v2.0.17 recommended)
    - [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306) (v4.6.0 recommended)
 
 3. **Open the sketch**
@@ -62,6 +63,7 @@ It fetches accurate NTP time and generates a modulated JJY signal via PWM.
 - After power-on or reset, press the **CONFIG** switch within 5 seconds.  
 - An AP named `ESP32_XXXXXXXX` starts (password: `password`).  
 - Connect from your phone or PC → set your Wi-Fi SSID and password via captive portal.
+- [Setup] page allows configuration of BAND, local time, and DST settings.
 
 ---
 
@@ -103,7 +105,6 @@ shachi-lab_logo.h           // Logo bitmap
 
 ## 📚 Dependencies
 
-- [WiFiManager](https://github.com/tzapu/WiFiManager)  
 - [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306)
 
 ---

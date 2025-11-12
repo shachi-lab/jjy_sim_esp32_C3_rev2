@@ -17,21 +17,17 @@
 #include "wire_compat.h"
 #include <OLEDDisplayUi.h>  // https://github.com/ThingPulse/esp8266-oled-ssd1306
 #include <SSD1306Wire.h>    //
-#include <WiFiManager.h>    // https://github.com/tzapu/WiFiManager
+#include <src/WiFiManager/WiFiManager.h>
 #include <FS.h>
 #include <SPIFFS.h>
 #include <driver/ledc.h>
+#include <Preferences.h>
 #include "shachi-lab_logo.h"
 
-#define Wire1 Wire
-
-#define JJY_TYPE          0       // 0:East(40kHz) / 1:West(60kHz)
+#define PRODUCT_NAME_STR  "ESP32 JJY Simulator R2"
+#define VERSION_STR       "Version 2.1.0"
 
 #define FORMAT_SPIFFS_IF_FAILED true
-#define FILE_NAME         "/JJY_TYPE.DAT"
-
-#define OUTPUT_TIMES      3
-#define JST       		    3600*9
 
 #undef  BUILTIN_LED
 #define BUILTIN_LED       0       // GPIO0
@@ -44,12 +40,14 @@
 #define PIN_PWM_A         10      // GPIO10
 #define PIN_PWM_B         4       // GPIO4
 
-#define I2CADR            0x3c
+#define OLED_I2CADR       0x3c
 
 #define LED_ON            0
 #define LED_OFF           1
 #define LED_BLINK         2
 
+#define JJY_TYPE_EAST     false     // East (40kHz)
+#define JJY_TYPE_WEST     true      // West (60kHz)
 #define JJY_FREQ_EAST     40000
 #define JJY_FREQ_WEST     60000
 #define JJY_STR_EAST      "E"
@@ -76,26 +74,35 @@
 #define JJY_BIT_PM0       -2
 #define JJY_BIT_OFF       -3
 
-const char* Version_str = "Version 2.0.0";
-
 String WiFi_ssid = "ssid";
 String WiFi_pass = "pass";
 String WiFi_time = "";
 String WiFi_ip   = "";
 char timeNowStr[64] = "";
 
-SSD1306Wire display(I2CADR, PIN_OLED_SDA, PIN_OLED_SCL);  
+SSD1306Wire display(OLED_I2CADR, PIN_OLED_SDA, PIN_OLED_SCL);  
 
 WiFiManager wm; // global wm instance
 WiFiManagerParameter custom_field; // global param ( for non blocking w params )
 
+Preferences prefs;
+
+#define TIMEZONE_JAPAN    9.0
+
 bool JJY_type = false;
 int JJY_freq = JJY_FREQ_EAST;
 String JJY_str = JJY_STR_EAST;
+float timezone_offset = TIMEZONE_JAPAN;
+String tz_str = "";
+bool daylight_flag = false;
 int config_wait_remain = 0;
 
-/**
-   初期化
+#define TIMEZONE_SEC      (long)(timezone_offset * 3600.0)
+#define DAYLIGHT_SEC      (daylight_flag ? 3600 : 0)
+#define JJY_DAYLIGHT_BIT  (daylight_flag ? 1 : 0)
+
+/*
+*  初期化
 */
 void setup() {
 
@@ -112,14 +119,13 @@ void setup() {
 
   if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
     go_reboot("SPIFFS Mount Failed");
-  } else {
-    JJY_type = get_JJY_type();
-    if ( JJY_type ) {
-      JJY_freq = JJY_FREQ_WEST;
-      JJY_str = JJY_STR_WEST;
-    }
+    for(;;);
   }
-  Serial.println("JJY_FREQ = " + String(JJY_freq) + JJY_str ); 
+  
+  get_settings();
+
+  Serial.println("JJY_FREQ = " + String(JJY_freq) + " : " + JJY_str ); 
+  Serial.println(tz_str);
 
   disp_screen(1);
 
@@ -148,6 +154,7 @@ void setup() {
       go_reboot("failed to connect / timeout");
     }
     conn_flag = true;
+    get_settings();
     break;
   }
 
@@ -185,9 +192,8 @@ void setup() {
     go_reboot("Connect timeout.");
   }
 
-  configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+  configTime( TIMEZONE_SEC, DAYLIGHT_SEC, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
-//ledcAttach(PWM_PIN, JJY_freq, PWM_BITS);
   pwm_setup();
 }
 
@@ -286,12 +292,11 @@ void disp_screen( int mode )
 
   display.clear();
   display.setFont(ArialMT_Plain_10);
-  String title = "ESP32 JJY Simulator R2 " + JJY_str;
 
-  display.drawString( 0,  0, title );
+  display.drawString( 0,  0, PRODUCT_NAME_STR " " + JJY_str );
 
   if( mode == -1 ){
-    display.drawString( 0, 15, Version_str );    
+    display.drawString( 0, 15, VERSION_STR );    
     display.drawString( 0, 25, "Waiting for CONFIG" );
     display.drawString( 0, 35, String(config_wait_remain) + " sec left" );
   }
@@ -312,18 +317,21 @@ void disp_screen( int mode )
   if( mode > 3 ) {
       display.drawString( 0, 25, "Connect : " + WiFi.localIP().toString());
   }
+  if( mode > 4 ) {
+    display.drawString( 78, 35, tz_str );
+  }
   if( mode == 6 ){
-    display.drawString( 0, 35, "Waiting for just min" );
+    display.drawString( 0, 35, "WAITING 00s" );
   } else
   if( mode > 6 ) {
-    display.drawString( 0, 35, "Outputting the wave!!" );
+    display.drawString( 0, 35, "SENDING..." );
   }
   if( mode == 5 ) {
-    display.drawString( 0, 35, "Waiting to get time");
+    display.drawString( 0, 35, "SYNC NTP...");
   } else
   if( mode > 5 ) {
     display.setFont(ArialMT_Plain_16);
-    display.drawString( 0, 45, timeNowStr);
+    display.drawString( 0, 46, timeNowStr);
   }
   display.display();
 }
@@ -335,7 +343,7 @@ struct tm *get_time_now()
 {
   static time_t time_last = 0;
 
-  time_t now = time(NULL);
+  time_t now = time(NULL) + DAYLIGHT_SEC;
   if( time_last == now )  return NULL;
   time_last = now;
 
@@ -524,27 +532,27 @@ const int totalDaysOfMonth[] = {0,31,59,90,120,151,181,212,243,273,304,334 };
   jjy_put_bit( JJY_BIT_PMn );   // :39 P4
   
   if (tm->tm_min == 15 || tm->tm_min == 45) {
-    jjy_put_bit( JJY_BIT_OFF );   // :40  
-    jjy_put_bit( JJY_BIT_OFF );   // :41  
-    jjy_put_bit( JJY_BIT_OFF );   // :42  
-    jjy_put_bit( JJY_BIT_OFF );   // :43  
-    jjy_put_bit( JJY_BIT_OFF );   // :44  
-    jjy_put_bit( JJY_BIT_OFF );   // :45  
-    jjy_put_bit( JJY_BIT_OFF );   // :46  
-    jjy_put_bit( JJY_BIT_OFF );   // :47  
-    jjy_put_bit( JJY_BIT_OFF );   // :48  
+    jjy_put_bit( JJY_BIT_OFF );     // :40  
+    jjy_put_bit( JJY_BIT_OFF );     // :41  
+    jjy_put_bit( JJY_BIT_OFF );     // :42  
+    jjy_put_bit( JJY_BIT_OFF );     // :43  
+    jjy_put_bit( JJY_BIT_OFF );     // :44  
+    jjy_put_bit( JJY_BIT_OFF );     // :45  
+    jjy_put_bit( JJY_BIT_OFF );     // :46  
+    jjy_put_bit( JJY_BIT_OFF );     // :47  
+    jjy_put_bit( JJY_BIT_OFF );     // :48  
     ww = 0;
  }
  else {
-    jjy_put_bit( 0 );             // :40 SU2
-    jjy_put_bit( yy & 0x80 );     // :41
-    jjy_put_bit( yy & 0x40 );     // :42
-    jjy_put_bit( yy & 0x20 );     // :43
-    jjy_put_bit( yy & 0x10 );     // :44
-    jjy_put_bit( yy & 0x08 );     // :45
-    jjy_put_bit( yy & 0x04 );     // :46
-    jjy_put_bit( yy & 0x02 );     // :47
-    jjy_put_bit( yy & 0x01 );     // :48
+    jjy_put_bit( JJY_DAYLIGHT_BIT );// :40 SU2
+    jjy_put_bit( yy & 0x80 );       // :41
+    jjy_put_bit( yy & 0x40 );       // :42
+    jjy_put_bit( yy & 0x20 );       // :43
+    jjy_put_bit( yy & 0x10 );       // :44
+    jjy_put_bit( yy & 0x08 );       // :45
+    jjy_put_bit( yy & 0x04 );       // :46
+    jjy_put_bit( yy & 0x02 );       // :47
+    jjy_put_bit( yy & 0x01 );       // :48
   }
   jjy_put_bit( JJY_BIT_PMn );   // :49 P5
   jjy_put_bit( ww & 0x04 );     // :50
@@ -560,56 +568,140 @@ const int totalDaysOfMonth[] = {0,31,59,90,120,151,181,212,243,273,304,334 };
 }
 
 /*
-* JJYのタイプ(E/W)を取得
+* 設定を取得
 */
-uint8_t get_JJY_type()
+void get_settings()
 {
-  uint8_t type = 0;
-  File fp = SPIFFS.open(FILE_NAME, FILE_READ);
-  if( !fp || fp.isDirectory() ) {
-    Serial.println("- failed to open file for reading");
-    return type;
+  prefs.begin("jjy", true);
+  JJY_type = prefs.getInt("type", false);                 // default = false (40kHz)
+  timezone_offset = prefs.getFloat("tz", TIMEZONE_JAPAN); // default = 9.0 (Japan)
+  daylight_flag = prefs.getBool("dst", false);            // default = false 
+  prefs.end();
+  if( timezone_offset < -12.0 || timezone_offset > 12.0 ) timezone_offset = TIMEZONE_JAPAN;
+
+  if (JJY_type == JJY_TYPE_EAST) {
+      JJY_freq = JJY_FREQ_EAST;
+      JJY_str = JJY_STR_EAST;
+  } else {
+      JJY_freq = JJY_FREQ_WEST;
+      JJY_str = JJY_STR_WEST;
   }
-  if ( fp.available() ) {
-    type = (fp.readString()).toInt();
-  }
-  fp.close();
-  return type;
+  tz_str = "UTC" + String((timezone_offset >= 0 ? "+" : "")) + String(timezone_offset, 1);
+  if (daylight_flag) tz_str += "*";
 }
 
 /*
-* JJYのタイプ(E/W)を保存
+* 設定を保存
 */
-void put_JJY_type(String type)
+void put_settings()
 {
-  File fp = SPIFFS.open(FILE_NAME, FILE_WRITE);
-  if( !fp || fp.isDirectory() ) {
-    Serial.println("- failed to open file for writting");
-    return;
-  }
-  fp.print( type );
-  fp.close();
+  prefs.begin("jjy", false);
+  prefs.putBool("type", JJY_type);      // true / false
+  prefs.putFloat("tz", timezone_offset);// -12.0 ～ +12.0
+  prefs.putBool("dst", daylight_flag);  // true / false
+  prefs.end();
+}
+
+
+/*
+* timezoneのoptionタグ作成
+*/
+String opt(float val, const char* label) {
+  String s = "<option value='";
+  s += String(val, 1);
+  s += "'";
+  if (abs(val - timezone_offset) < 0.01) s += " selected";
+  s += ">";
+  s += label;
+  s += "</option>";
+  return s;
 }
 
 /*
-* JJYタイプの設定画面 (for WM)
+* 現在値を反映したHTML生成
+*/
+void build_config_html()
+{
+  static String page;
+  
+  page = "<h1>Setup</h1>";
+  page += 
+    "<label for=\"type\">Band :</label>"
+    "<select id=\"type\" name=\"type\">"
+    "<option value=\"0\"";
+  if (JJY_type == JJY_TYPE_EAST) page += " selected";
+  page +=
+    ">40 kHz (East)</option>"
+    "<option value=\"1\"";
+  if (JJY_type != JJY_TYPE_EAST) page += " selected";
+  page +=
+    ">60 kHz (West)</option>"
+    "</select>"
+    "<br><br>";
+
+  page += 
+    "<label for=\"tz\">Timezone :</label>"
+    "<select id=\"tz\"name=\"tz\">";
+	page += opt(-12.0, "(UTC−12:00) Baker Island");
+	page += opt(-11.0, "(UTC−11:00) American Samoa");
+	page += opt(-10.0, "(UTC−10:00) Hawaii");
+	page += opt(-9.0,  "(UTC−09:00) Alaska");
+	page += opt(-8.0,  "(UTC−08:00) Los Angeles / Pacific Time");
+	page += opt(-7.0,  "(UTC−07:00) Denver / Mountain Time");
+	page += opt(-6.0,  "(UTC−06:00) Chicago / Central Time");
+	page += opt(-5.0,  "(UTC−05:00) New York / Eastern Time");
+	page += opt(-4.0,  "(UTC−04:00) Santiago / Atlantic Time");
+	page += opt(-3.5,  "(UTC−03:30) Newfoundland");
+	page += opt(-3.0,  "(UTC−03:00) Buenos Aires / São Paulo");
+	page += opt(-2.0,  "(UTC−02:00) South Georgia");
+	page += opt(-1.0,  "(UTC−01:00) Azores");
+	page += opt( 0.0,  "(UTC±00:00) London / Lisbon");
+	page += opt( 1.0,  "(UTC＋01:00) Berlin / Paris");
+	page += opt( 2.0,  "(UTC＋02:00) Cairo / Athens");
+	page += opt( 3.0,  "(UTC＋03:00) Moscow / Nairobi");
+	page += opt( 3.5,  "(UTC＋03:30) Tehran");
+	page += opt( 4.0,  "(UTC＋04:00) Dubai / Baku");
+	page += opt( 4.5,  "(UTC＋04:30) Kabul");
+	page += opt( 5.0,  "(UTC＋05:00) Karachi / Tashkent");
+	page += opt( 5.5,  "(UTC＋05:30) India / Colombo");
+	page += opt( 5.75, "(UTC＋05:45) Nepal");
+	page += opt( 6.0,  "(UTC＋06:00) Dhaka / Almaty");
+	page += opt( 6.5,  "(UTC＋06:30) Yangon / Cocos Islands");
+	page += opt( 7.0,  "(UTC＋07:00) Bangkok / Jakarta");
+	page += opt( 8.0,  "(UTC＋08:00) Beijing / Singapore");
+	page += opt( 9.0,  "(UTC＋09:00) Tokyo / Seoul");
+	page += opt( 9.5,  "(UTC＋09:30) Darwin / Adelaide");
+	page += opt(10.0,  "(UTC＋10:00) Sydney / Guam");
+	page += opt(11.0,  "(UTC＋11:00) Solomon Islands / Magadan");
+	page += opt(12.0,  "(UTC＋12:00) Fiji / Auckland");
+	page += opt(13.0,  "(UTC＋13:00) Tonga / Samoa");
+  page += "</select><br><br>";
+
+  page +=
+    "<input type='checkbox' id='dst' name='dst' value='1'";
+  if (daylight_flag) page += " checked";
+  page +=
+    ">"
+    "<label for=\"dst\">DST(Summer Time)</label>"
+    "<br><br>";
+
+  new (&custom_field) WiFiManagerParameter(page.c_str()); // custom html input
+  wm.eraseParameter();
+  wm.addParameter(&custom_field);
+}
+
+/*
+* 設定画面
 */
 void config_mode_setup()
 {
-  static String custom_radio_str = "<br/><label for='radiofreq'>Radio Freq</label><br><input type='radio' name='radiofreq' value='0' ";
-  if (!JJY_type)  custom_radio_str += "checked";
-  custom_radio_str += "> 40kHz (East)<br><input type='radio' name='radiofreq' value='1' ";
-  if (JJY_type)   custom_radio_str += "checked";
-  custom_radio_str += "> 60kHz (West)";
-  
-  new (&custom_field) WiFiManagerParameter(custom_radio_str.c_str()); // custom html input
-  wm.addParameter(&custom_field);
+  build_config_html();
+
   wm.setSaveParamsCallback(saveParamCallback);
   std::vector<const char *> menu = {"wifi","info","param","sep","restart","exit"};
   wm.setMenu(menu);
   // set dark theme
   wm.setClass("invert");
-
   wm.setConfigPortalTimeout(120);
 }
 
@@ -631,7 +723,20 @@ String getParam(String name)
 */
 void saveParamCallback(){
   Serial.println("[CALLBACK] saveParamCallback fired");
-  String para = getParam("radiofreq");
-  Serial.println("PARAM radiofreq = " + para);
-  put_JJY_type(para);
+
+  String para_freq = getParam("type");
+  String para_tz = getParam("tz");
+  String para_dst = getParam("dst");
+
+  Serial.println("PARAM freq = " + para_freq);
+  JJY_type = atoi(para_freq.c_str()) != 0;
+
+  Serial.println("PARAM tz = " + para_tz);
+  timezone_offset = atof(para_tz.c_str());
+
+  Serial.println("PARAM dst = " + para_dst);
+  daylight_flag = atoi(para_dst.c_str()) != 0;
+
+  put_settings();
+  build_config_html();
 }
