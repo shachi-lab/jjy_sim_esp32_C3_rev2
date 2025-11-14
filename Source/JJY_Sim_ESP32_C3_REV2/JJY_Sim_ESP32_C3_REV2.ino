@@ -17,7 +17,7 @@
 #include "wire_compat.h"
 #include <OLEDDisplayUi.h>  // https://github.com/ThingPulse/esp8266-oled-ssd1306
 #include <SSD1306Wire.h>    //
-#include <src/WiFiManager/WiFiManager.h>
+#include <WiFiManager.h>    // https://github.com/tzapu/WiFiManager
 #include <FS.h>
 #include <SPIFFS.h>
 #include <driver/ledc.h>
@@ -25,7 +25,7 @@
 #include "shachi-lab_logo.h"
 
 #define PRODUCT_NAME_STR  "ESP32 JJY Simulator R2"
-#define VERSION_STR       "Version 2.1.0"
+#define VERSION_STR       "Version 2.1.1"
 
 #define FORMAT_SPIFFS_IF_FAILED true
 
@@ -690,8 +690,9 @@ void build_config_html()
     "<br><br>";
 
   new (&custom_field) WiFiManagerParameter(page.c_str()); // custom html input
-  wm.eraseParameter();
-  wm.addParameter(&custom_field);
+  if (wm.getParametersCount() == 0 ) {
+    wm.addParameter(&custom_field);
+  }
 }
 
 /*

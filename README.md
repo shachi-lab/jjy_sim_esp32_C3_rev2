@@ -33,6 +33,7 @@ It fetches accurate NTP time and generates a modulated JJY signal via PWM.
    - Target board: **ESP32-C3 Dev Module**
 
 2. **Install required libraries**
+   - [WiFiManager](https://github.com/tzapu/WiFiManager)（v2.0.17 recommended）
    - [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306) (v4.6.0 recommended)
 
 3. **Open the sketch**

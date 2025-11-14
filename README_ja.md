@@ -28,6 +28,7 @@ Rev.2 はRF出力をHブリッジ構成としました。
    - 対象ボード：**ESP32-C3 Dev Module**
 
 2. 必要なライブラリをインストールする  
+   - [WiFiManager](https://github.com/tzapu/WiFiManager)（バージョン 2.0.17 推奨）
    - [ESP8266 and ESP32 OLED driver for SSD1306 displays](https://github.com/ThingPulse/esp8266-oled-ssd1306)（バージョン 4.6.0 推奨）
 
    ※ Arduino IDE の「ライブラリを管理」メニューからインストール可能です。
