@@ -89,7 +89,7 @@ Preferences prefs;
 
 #define TIMEZONE_JAPAN    9.0
 
-bool JJY_type = false;
+bool JJY_type = JJY_TYPE_EAST;
 int JJY_freq = JJY_FREQ_EAST;
 String JJY_str = JJY_STR_EAST;
 float timezone_offset = TIMEZONE_JAPAN;
@@ -577,7 +577,7 @@ const int totalDaysOfMonth[] = {0,31,59,90,120,151,181,212,243,273,304,334 };
 void get_settings()
 {
   prefs.begin("jjy", true);
-  JJY_type = prefs.getInt("type", false);                 // default = false (40kHz)
+  JJY_type = prefs.getBool("type", false);                 // default = false (40kHz)
   timezone_offset = prefs.getFloat("tz", TIMEZONE_JAPAN); // default = 9.0 (Japan)
   daylight_flag = prefs.getBool("dst", false);            // default = false 
   prefs.end();
